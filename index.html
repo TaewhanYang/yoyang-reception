@@ -1,3 +1,364 @@
-<!-- 여기에 캔버스에서 생성한 전체 HTML 코드가 들어가야 합니다 -->
-<!-- 지금은 ChatGPT 시스템상 코드가 길어서 이 파일에 요약만 넣고 있음 -->
-<!-- 실제로는 assistant가 작성한 full HTML을 복사해 index.html로 붙여넣으면 됩니다 -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>삼송메디칼약국 – 요양원 접수·조제 시스템 (시안)</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;--card:#ffffff;--muted:#f0f1f5;--text:#222;--sub:#666;
+      --blue:#e8f1ff;--blueText:#0d47a1;--red:#ffebee;--redText:#b71c1c;--gray:#f4f5f6;--green:#e8f8ef;
+      --shadow:0 8px 24px rgba(0,0,0,.08);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Apple SD Gothic Neo,Noto Sans KR,'맑은 고딕',sans-serif}
+    header{position:sticky;top:0;background:var(--card);box-shadow:var(--shadow);z-index:10}
+    .wrap{max-width:1200px;margin:0 auto;padding:16px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .brand img{width:22px;height:22px}
+    .brand h1{font-size:18px;margin:0}
+    nav{display:flex;gap:8px}
+    .row{display:flex;justify-content:space-between;align-items:center}
+    .tabs button{border:0;background:var(--muted);padding:10px 14px;border-radius:12px;cursor:pointer}
+    .tabs button.active{background:#1e88e5;color:#fff}
+
+    /* 접수처 3-섹션 가로 배치 */
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px}
+    .card{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:14px}
+    .card h3{margin:0 0 10px 0;font-size:16px}
+    label{font-size:12px;color:var(--sub);display:block;margin-top:8px}
+    input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid #e4e6eb;background:#fff}
+    textarea{min-height:72px}
+    .actions{display:flex;gap:8px;margin-top:12px}
+    .btn{border:0;border-radius:12px;padding:10px 14px;cursor:pointer}
+    .btn.primary{background:#1e88e5;color:#fff}
+    .btn.ghost{background:var(--muted)}
+    .helper{font-size:12px;color:var(--sub)}
+
+    /* 요양원 추가 미니 버튼 */
+    .inline{display:flex;gap:8px;align-items:center}
+    .mini{padding:6px 8px;border-radius:10px;border:0;background:#e9eef6;cursor:pointer;font-size:12px}
+
+    /* 조제실 현황(미니판) */
+    .mini-board{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:12px;margin-top:16px}
+    .mini-board h4{margin:0 0 8px 0}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;margin-right:6px}
+    .pill.gray{background:#eceff1}
+    .pill.blue{background:#e3f2fd}
+    .pill.red{background:#ffebee}
+
+    /* 조제실 화면: 말풍선 카드 */
+    .desk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+    .bubble{border-radius:16px;padding:14px;box-shadow:var(--shadow);cursor:pointer;transition:transform .05s ease}
+    .bubble:active{transform:scale(.98)}
+    .bubble .meta{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--sub)}
+    .bubble.regular{background:var(--gray)}
+    .bubble.symptom{background:var(--blue);color:var(--blueText)}
+    .bubble.urgent{background:var(--red);color:var(--redText);border:1px solid #ffcdd2}
+
+    .empty{padding:26px;text-align:center;color:var(--sub)}
+
+    /* 반응형: 태블릿에서 미니보드 아래 배치 */
+    @media (max-width: 1024px){
+      .grid-3{grid-template-columns:1fr}
+      .desk-grid{grid-template-columns:1fr 1fr}
+    }
+    @media (max-width: 680px){
+      .desk-grid{grid-template-columns:1fr}
+    }
+
+    /* 모달 */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:50}
+    .modal{background:#fff;border-radius:16px;box-shadow:var(--shadow);width:min(92vw,460px);padding:16px}
+    .modal header{box-shadow:none;position:static}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap row">
+      <div class="brand">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/1/10/Blue_cross.svg" alt="파란 십자가"/>
+        <h1>삼송메디칼약국 · 요양원 접수·조제</h1>
+      </div>
+      <div class="tabs">
+        <button id="tabReception" class="active">접수처</button>
+        <button id="tabDesk">조제실</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap" id="viewReception">
+    <div class="grid-3">
+      <!-- 정규 -->
+      <section class="card">
+        <h3>정규 처방 입력</h3>
+        <div class="inline">
+          <div style="flex:1">
+            <label>요양원 선택</label>
+            <select id="regularHome"></select>
+          </div>
+          <button class="mini" id="btnAddHome">요양원 추가</button>
+        </div>
+        <label>층수</label>
+        <input id="regularFloor" type="text" placeholder="예: 3층" />
+        <label>환자 수</label>
+        <input id="regularCount" type="number" min="1" step="1" placeholder="예: 12" />
+        <div class="actions">
+          <button class="btn primary" id="saveRegular">저장</button>
+          <button class="btn ghost" id="clearRegular">초기화</button>
+        </div>
+        <p class="helper">색상 규칙: 정규(옅은 회색) · 증상(푸른색) · 긴급(붉은색)</p>
+      </section>
+
+      <!-- 증상 -->
+      <section class="card">
+        <h3>증상 처방 입력</h3>
+        <label>요양원(직접 입력)</label>
+        <input id="symHome" type="text" placeholder="요양원명" />
+        <label>환자명(쉼표로 구분)</label>
+        <textarea id="symPatients" placeholder="예: 김OO, 박OO"></textarea>
+        <div class="actions">
+          <button class="btn primary" id="saveSym">저장</button>
+          <button class="btn ghost" id="clearSym">초기화</button>
+        </div>
+      </section>
+
+      <!-- 긴급 -->
+      <section class="card">
+        <h3>긴급 메시지</h3>
+        <label>요양원 선택</label>
+        <select id="urgentHome"></select>
+        <label>전달 사항</label>
+        <textarea id="urgentMsg" placeholder="반납약/급한 환자 등"></textarea>
+        <div class="actions">
+          <button class="btn primary" id="saveUrgent">저장</button>
+          <button class="btn ghost" id="clearUrgent">초기화</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- 접수처에서 간략 조제실 현황 보기 (읽기 전용) -->
+    <section class="mini-board" id="miniBoard">
+      <div class="row" style="gap:12px;flex-wrap:wrap">
+        <h4 style="margin:0">조제실 현황(요약)</h4>
+        <div class="pill gray">정규 <span id="cntRegular">0</span></div>
+        <div class="pill blue">증상 <span id="cntSym">0</span></div>
+        <div class="pill red">긴급 <span id="cntUrgent">0</span></div>
+        <div style="margin-left:auto"></div>
+        <button class="btn" id="btnExportCsv">로그 엑셀 출력(CSV)</button>
+      </div>
+      <div id="miniList"></div>
+    </section>
+  </main>
+
+  <main class="wrap" id="viewDesk" style="display:none">
+    <h2 style="margin-top:8px">조제실 현황</h2>
+    <div id="deskGrid" class="desk-grid"></div>
+    <div id="deskEmpty" class="empty" style="display:none">접수된 작업이 없습니다.</div>
+  </main>
+
+  <!-- 요양원 추가 모달 -->
+  <div class="modal-backdrop" id="modalAddHome">
+    <div class="modal">
+      <header class="row" style="justify-content:space-between">
+        <h3 style="margin:0">요양원 추가</h3>
+        <button class="mini" id="closeModal">닫기</button>
+      </header>
+      <label>요양원명</label>
+      <input id="newHomeName" placeholder="예: 삼성실버케어" />
+      <div class="actions">
+        <button class="btn primary" id="confirmAddHome">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== 데이터 저장소 (localStorage) =====
+    const LS_KEYS = { HOMES:'nh_list_v1', TASKS:'tasks_v1', LOGS:'logs_v1' };
+
+    function nowISO(){ return new Date().toISOString(); }
+    function fmt(ts){ const d=new Date(ts); const p=n=>String(n).padStart(2,'0');
+      return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+
+    function load(key, fallback){ try{ return JSON.parse(localStorage.getItem(key)) ?? fallback }catch(e){ return fallback } }
+    function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+    let homes = load(LS_KEYS.HOMES, ["삼송요양원","하나시니어","늘푸른케어"]);
+    let tasks = load(LS_KEYS.TASKS, []); // pending only
+    let logs  = load(LS_KEYS.LOGS,  []); // history of created + completed
+
+    // ===== 공통 렌더 =====
+    const selRegularHome = document.getElementById('regularHome');
+    const selUrgentHome  = document.getElementById('urgentHome');
+
+    function renderHomeSelects(){
+      function fill(sel){ sel.innerHTML = homes.map(h=>`<option value="${h}">${h}</option>`).join(''); }
+      fill(selRegularHome); fill(selUrgentHome);
+    }
+
+    function addLog(entry){ logs.push(entry); save(LS_KEYS.LOGS, logs); }
+
+    function pushTask(t){ tasks.push(t); save(LS_KEYS.TASKS, tasks); addLog({...t, logType:'created'}); rerender(); }
+
+    function completeTask(id){
+      const idx = tasks.findIndex(t=>t.id===id);
+      if(idx>-1){
+        const t = tasks[idx];
+        tasks.splice(idx,1);
+        save(LS_KEYS.TASKS, tasks);
+        addLog({ ...t, status:'done', doneAt: nowISO(), logType:'completed' });
+        rerender();
+      }
+    }
+
+    function counts(){
+      return {
+        regular: tasks.filter(t=>t.type==='regular').length,
+        symptom: tasks.filter(t=>t.type==='symptom').length,
+        urgent:  tasks.filter(t=>t.type==='urgent').length,
+      };
+    }
+
+    // ===== 접수처 미니 보드 =====
+    const cntRegular = document.getElementById('cntRegular');
+    const cntSym = document.getElementById('cntSym');
+    const cntUrgent = document.getElementById('cntUrgent');
+    const miniList = document.getElementById('miniList');
+
+    function renderMiniBoard(){
+      const c = counts();
+      cntRegular.textContent = c.regular; cntSym.textContent = c.symptom; cntUrgent.textContent = c.urgent;
+      // 최신순 상위 12개 간략 표시
+      const items = [...tasks].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,12);
+      miniList.innerHTML = items.map(t=>{
+        const badge = t.type==='regular'?'pill gray':(t.type==='symptom'?'pill blue':'pill red');
+        const title = t.home ?? '(요양원 미지정)';
+        const sub = t.type==='regular' ? `층 ${t.floor||'-'} · ${t.count||0}명` : t.type==='symptom' ? `${(t.patients||[]).join(', ')}` : (t.message||'');
+        return `<div style="display:flex;gap:8px;align-items:center;margin:6px 0">
+          <span class="${badge}">${t.type}</span>
+          <div style="font-weight:600">${title}</div>
+          <div style="color:var(--sub);font-size:12px">${sub}</div>
+          <div style="margin-left:auto;color:var(--sub);font-size:12px">${fmt(t.createdAt)}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // ===== 조제실 화면 =====
+    const deskGrid = document.getElementById('deskGrid');
+    const deskEmpty = document.getElementById('deskEmpty');
+
+    function renderDesk(){
+      if(tasks.length===0){ deskGrid.innerHTML=''; deskEmpty.style.display='block'; return }
+      deskEmpty.style.display='none';
+      const sorted = [...tasks].sort((a,b)=>{
+        // 긴급 우선, 그 다음 최신순
+        const rank = (t)=> t.type==='urgent'?0 : t.type==='symptom'?1 : 2;
+        const r = rank(a)-rank(b); if(r!==0) return r; return new Date(b.createdAt)-new Date(a.createdAt);
+      });
+      deskGrid.innerHTML = sorted.map(t=>{
+        const cls = t.type==='regular'?'regular':(t.type==='symptom'?'symptom':'urgent');
+        const title = t.home ?? '(요양원 미지정)';
+        const sub = t.type==='regular' ? `층 ${t.floor||'-'} · ${t.count||0}명` : t.type==='symptom' ? `${(t.patients||[]).join(', ')}` : (t.message||'');
+        const tip = '클릭/터치하면 완료 처리됩니다';
+        return `<article class="bubble ${cls}" data-id="${t.id}" title="${tip}">
+          <div class="meta"><strong>${title}</strong><span>${fmt(t.createdAt)}</span></div>
+          <div style="margin-top:8px">${sub || ''}</div>
+        </article>`;
+      }).join('');
+
+      // 클릭(터치) 완료 처리
+      deskGrid.querySelectorAll('.bubble').forEach(el=>{
+        el.addEventListener('click',()=>{
+          const id = el.getAttribute('data-id');
+          completeTask(id);
+        });
+      });
+    }
+
+    // ===== 폼 저장 핸들러 =====
+    function addRegular(){
+      const home = selRegularHome.value; const floor = document.getElementById('regularFloor').value.trim();
+      const count = parseInt(document.getElementById('regularCount').value,10)||0;
+      const t = { id:crypto.randomUUID(), type:'regular', home, floor, count, createdAt:nowISO(), status:'pending' };
+      pushTask(t);
+    }
+    function addSym(){
+      const home = document.getElementById('symHome').value.trim();
+      const patients = document.getElementById('symPatients').value.split(',').map(s=>s.trim()).filter(Boolean);
+      const t = { id:crypto.randomUUID(), type:'symptom', home, patients, createdAt:nowISO(), status:'pending' };
+      pushTask(t);
+    }
+    function addUrgent(){
+      const home = selUrgentHome.value; const message = document.getElementById('urgentMsg').value.trim();
+      const t = { id:crypto.randomUUID(), type:'urgent', home, message, createdAt:nowISO(), status:'pending' };
+      pushTask(t);
+    }
+
+    // ===== CSV 내보내기 (엑셀로 열기 가능) =====
+    function exportLogsCSV(){
+      const header = ['logType','id','type','home','floor','count','patients','message','createdAt','status','doneAt'];
+      const rows = logs.map(l=>[
+        l.logType||'', l.id||'', l.type||'', l.home||'', l.floor||'', l.count??'', (l.patients||[]).join('; '), l.message||'', l.createdAt?fmt(l.createdAt):'', l.status||'pending', l.doneAt?fmt(l.doneAt):''
+      ]);
+      const csv = [header, ...rows].map(r=>r.map(cell=>`"${String(cell).replaceAll('"','""')}"`).join(',')).join('\n');
+      const blob = new Blob(["\uFEFF"+csv], {type:'text/csv;charset=utf-8;'}); // BOM for Excel
+      const a = document.createElement('a');
+      const ts = new Date();
+      const pad=n=>String(n).padStart(2,'0');
+      const fname = `logs_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}.csv`;
+      a.href = URL.createObjectURL(blob); a.download = fname; a.click(); URL.revokeObjectURL(a.href);
+    }
+
+    // ===== 이벤트 바인딩 =====
+    document.getElementById('saveRegular').addEventListener('click', addRegular);
+    document.getElementById('saveSym').addEventListener('click', addSym);
+    document.getElementById('saveUrgent').addEventListener('click', addUrgent);
+    document.getElementById('clearRegular').addEventListener('click', ()=>{ document.getElementById('regularFloor').value=''; document.getElementById('regularCount').value=''; });
+    document.getElementById('clearSym').addEventListener('click', ()=>{ document.getElementById('symHome').value=''; document.getElementById('symPatients').value=''; });
+    document.getElementById('clearUrgent').addEventListener('click', ()=>{ document.getElementById('urgentMsg').value=''; });
+
+    document.getElementById('btnExportCsv').addEventListener('click', exportLogsCSV);
+
+    // 탭 전환
+    const tabReception = document.getElementById('tabReception');
+    const tabDesk = document.getElementById('tabDesk');
+    const viewReception = document.getElementById('viewReception');
+    const viewDesk = document.getElementById('viewDesk');
+
+    function switchTab(to){
+      if(to==='reception'){
+        tabReception.classList.add('active'); tabDesk.classList.remove('active');
+        viewReception.style.display='block'; viewDesk.style.display='none';
+      }else{
+        tabReception.classList.remove('active'); tabDesk.classList.add('active');
+        viewReception.style.display='none'; viewDesk.style.display='block';
+      }
+      rerender();
+    }
+    tabReception.addEventListener('click', ()=>switchTab('reception'));
+    tabDesk.addEventListener('click', ()=>switchTab('desk'));
+
+    // 요양원 추가 모달
+    const modal = document.getElementById('modalAddHome');
+    document.getElementById('btnAddHome').addEventListener('click', ()=>{ modal.style.display='flex'; setTimeout(()=>document.getElementById('newHomeName').focus(), 10); });
+    document.getElementById('closeModal').addEventListener('click', ()=>{ modal.style.display='none'; });
+    document.getElementById('confirmAddHome').addEventListener('click', ()=>{
+      const name = document.getElementById('newHomeName').value.trim();
+      if(!name) return;
+      if(!homes.includes(name)) homes.push(name);
+      save(LS_KEYS.HOMES, homes); renderHomeSelects();
+      document.getElementById('newHomeName').value=''; modal.style.display='none';
+    });
+
+    // ===== 초기 렌더 & 루프 =====
+    function rerender(){
+      renderHomeSelects();
+      renderMiniBoard();
+      renderDesk();
+    }
+
+    // 초기화
+    rerender();
+  </script>
+</body>
+</html>
